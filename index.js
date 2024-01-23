@@ -43,17 +43,58 @@ async function run() {
       if (existingUser) {
         return res.status(400).json({ message: "This user already exists." });
       }
+
+      // Log hashed password
+      const hashedPassword = await bcrypt.hash(password, 10);
+      console.log("Hashed Password:", hashedPassword);
       // Check existing user end
       const result = await userCollection.insertOne({
         fullName,
         role,
         phoneNumber,
         email,
-        password,
+        password: hashedPassword,
       });
       res.send(result);
     });
     // Create users end
+
+    // Login starts
+    app.post("/login", async (req, res) => {
+      console.log("login API hitting");
+      const { email, password } = req.body;
+
+      console.log("Received email and password:", email, password);
+
+      // Check if the user exists
+      const user = await userCollection.findOne({ email });
+
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Compare the provided password with the stored hashed password
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+
+      console.log("Password validation result:", isPasswordValid);
+
+      if (!isPasswordValid) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
+
+      // Generate a JWT token for authentication
+      const token = jwt.sign(
+        { userId: user._id, email: user.email },
+        process.env.JWT_SECRET,
+        {
+          expiresIn: "1h", // You can adjust the expiration time as needed
+        }
+      );
+
+      // Return the token to the client
+      res.json({ token });
+    });
+    // Login end
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
@@ -66,34 +107,6 @@ async function run() {
   }
 }
 run().catch(console.dir);
-
-// new start
-// app.post("/login", async (req, res) => {
-//   const { email, password } = req.body;
-
-//   try {
-//     const user = await client
-//       .db(process.env.DB_NAME)
-//       .collection("users")
-//       .findOne({ email });
-
-//     if (!user) {
-//       return res.status(401).json({ message: "Invalid credentials" });
-//     }
-
-//     const passwordMatch = await bcrypt.compare(password, user.password);
-
-//     if (!passwordMatch) {
-//       return res.status(401).json({ message: "Invalid credentials" });
-//     }
-
-//     res.status(200).json({ message: "Login successful" });
-//   } catch (error) {
-//     console.error("Error during login:", error);
-//     res.status(500).json({ message: "Internal Server Error" });
-//   }
-// });
-// new end
 
 app.get("/", (req, res) => {
   res.send("Home finder server is running");
