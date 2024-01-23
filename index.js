@@ -29,6 +29,7 @@ async function run() {
 
     // collections starts
     const userCollection = client.db("homeFinder").collection("users");
+    const houseCollection = client.db("homeFinder").collection("allhouses");
     // collections end
 
     // Create users starts
@@ -95,6 +96,25 @@ async function run() {
       res.json({ token });
     });
     // Login end
+
+    // house CREATE api to receive data from client side starts
+    app.post("/allhouses", async (req, res) => {
+      const newHouse = req.body;
+      console.log(newHouse);
+      // insert or add data to the mongodb database
+      const result = await houseCollection.insertOne(newHouse);
+      // send result to the client
+      res.send(result);
+    });
+    // house CREATE api to receive data from client side end
+
+    // house READ starts
+    app.get("/allhouses", async (req, res) => {
+      const cursor = houseCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    // house READ end
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
