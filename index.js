@@ -6,6 +6,7 @@ const { MongoClient, ServerApiVersion } = require("mongodb");
 const bcrypt = require("bcrypt");
 const app = express();
 const port = process.env.PORT || 5000;
+const { ObjectId } = require("mongodb");
 
 app.use(cors());
 app.use(express.json());
@@ -115,6 +116,44 @@ async function run() {
       res.send(result);
     });
     // house READ end
+
+    // my houses READ starts
+    app.get("/myhouses", async (req, res) => {
+      let query = {};
+      if (req.query?.email) {
+        query = { email: req.query.email };
+      }
+      const cursor = houseCollection.find(query);
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    // my houses READ end
+
+    // house DELETE api to remove a house from the database
+    app.delete("/allhouses/:houseId", async (req, res) => {
+      const houseId = req.params.houseId;
+
+      try {
+        // Perform the deletion operation
+        const result = await houseCollection.deleteOne({
+          _id: new ObjectId(houseId),
+        });
+
+        if (result.deletedCount === 1) {
+          res
+            .status(200)
+            .json({ success: true, message: "House deleted successfully" });
+        } else {
+          res.status(404).json({ success: false, message: "House not found" });
+        }
+      } catch (error) {
+        console.error(error);
+        res
+          .status(500)
+          .json({ success: false, message: "Internal server error" });
+      }
+    });
+    // house DELETE api end
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 });
